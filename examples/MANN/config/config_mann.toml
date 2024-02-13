@@ -53,4 +53,4 @@ switch_off_after = 0.02
 
 [MANN]
 projected_base_datapoints = 12
-onnx_model_path = "./config/ergocubSN000_26j_49e.onnx"
+onnx_model_path = "./config/training_subsampled_mirrored_D2_10x_pi_loss_26j_20240210-015721.onnx"

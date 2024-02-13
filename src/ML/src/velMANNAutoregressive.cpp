@@ -649,9 +649,11 @@ bool velMANNAutoregressive::setInput(const Input& input)
                                                             0).finished();
 
     // Check if there is no user input or if the robot reached the desired position
-    if (input.desiredFutureBaseTrajectory.rightCols(1) == (Eigen::Vector2d::Zero()) || I_positionError.norm() <= 0.25)
+    const double radius = 0.25;
+    if (input.desiredFutureBaseTrajectory.rightCols(1) == (Eigen::Vector2d::Zero()) || I_positionError.norm() <= radius)
     {
-        m_pimpl->lambda_0 = 0.0;
+        // m_pimpl->lambda_0 = tanh(2 * I_positionError.norm() / radius); //try with decaying fucntion instead of sudden
+        m_pimpl->lambda_0 = pow(I_positionError.norm(), 6.0); //try with decaying fucntion instead of sudden
     }
     else
     {
@@ -702,7 +704,7 @@ bool velMANNAutoregressive::setInput(const Input& input)
     Eigen::Matrix3Xd omega_E(3, input.desiredFutureBaseDirections.cols());
     for (int i = 0; i < input.desiredFutureBaseDirections.cols(); i++)
     {
-        omega_E.col(i) = previousVelMannOutput.futureBaseAngularVelocityTrajectory.col(i) - c0 * Skv;
+        omega_E.col(i) = m_pimpl->lambda_0 * (previousVelMannOutput.futureBaseAngularVelocityTrajectory.col(i) - c0 * Skv);
     }
 
     // assign the rotational PID angular velocity output to be the future portion of the next MANN input
