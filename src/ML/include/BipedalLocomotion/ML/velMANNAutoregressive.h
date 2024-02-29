@@ -164,12 +164,6 @@ public:
 
         std::chrono::nanoseconds time; /**< Current time stored in the advanceable */
 
-        /**< For the linear PID */
-        Eigen::Vector2d I_x_des; /**< SE(3) transformation of the input reference base with respect to the inertial frame */
-
-        /**< For the rotational PID */
-        manif::SE3d I_H_ref; /**< SE(3) transformation of the input reference base with respect to the inertial frame */
-
         /**
          * Generate a dummy autoregressive state from the input.
          * @param input input to the autoregressive model.
