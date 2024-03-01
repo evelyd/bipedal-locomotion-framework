@@ -32,7 +32,8 @@ void CreateVelMANNAutoregressiveInputBuilder(pybind11::module& module)
     py::class_<ML::velMANNDirectionalInput>(module, "velMANNDirectionalInput")
         .def(py::init())
         .def_readwrite("motion_direction", &ML::velMANNDirectionalInput::motionDirection)
-        .def_readwrite("base_direction", &ML::velMANNDirectionalInput::baseDirection);
+        .def_readwrite("base_direction", &ML::velMANNDirectionalInput::baseDirection)
+        .def_readwrite("crouching_desired", &ML::velMANNDirectionalInput::crouchingDesired);
 
     BipedalLocomotion::bindings::System::CreateAdvanceable<ML::velMANNDirectionalInput, //
                                                            ML::velMANNAutoregressiveInput> //

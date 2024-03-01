@@ -131,6 +131,9 @@ bool velMANNAutoregressiveInputBuilder::setInput(const Input& input)
                                             ? -std::sin(maxBaseDirectionAngle)
                                             : std::sin(maxBaseDirectionAngle);
 
+    //TODO define the crouching bool here, then have to specify it in ipynb or with fake joypad
+    // m_pimpl->input.crouchingDesired; //maybe not needed to specify here since no proc necessary
+
     return true;
 }
 

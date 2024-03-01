@@ -122,6 +122,14 @@ struct velMANNAutoregressive::Impl
     Eigen::RowVectorXd previousDesiredAngVel = Eigen::VectorXd::Zero(projectedBaseDatapoints);
     Eigen::Vector3d previousOmegaE = Eigen::Vector3d::Zero();
 
+    // For joint PID
+    double desiredTorsoAngle;
+    bool crouchingDesired = false;
+    double c2;
+
+    // For joint PID
+    const int controlledJointIdx = 12;
+
     int rootIndex;
     int chestIndex;
 
@@ -412,6 +420,14 @@ bool velMANNAutoregressive::initialize(
         return false;
     }
 
+    if (!ptr->getParameter("joint_pid_gain", m_pimpl->c2))
+    {
+        log()->error("{} Unable to find the parameter named '{}'.",
+                     logPrefix,
+                     "joint_pid_gain");
+        return false;
+    }
+
     // the gravity is not used by this class, however the kindyn computation object requires this
     // information when the internal state is updated. For this reason we avoid allocating the
     // memory every cycle and we keep it here.
@@ -593,10 +609,27 @@ bool velMANNAutoregressive::setInput(const Input& input)
     {
         m_pimpl->velMannInput.jointPositions = m_pimpl->initial_joint_positions;
     }
+
+    //TODO remember to apply gradually if sudden doesn't work, copy python impl
+    // Control the torso angle depending on user input
+    if (m_pimpl->crouchingDesired) //TODO connect it somehow to joypad inputs
+    {
+        m_pimpl->desiredTorsoAngle = 0.6;
+    }
     else
     {
-        m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
+        m_pimpl->desiredTorsoAngle = 0.25;
     }
+    Eigen::VectorXd sDesired = previousVelMannOutput.jointPositions;
+    sDesired(12) = m_pimpl->desiredTorsoAngle;
+
+    // Apply joint PID
+    Eigen::VectorXd sDot = previousVelMannOutput.jointVelocities;
+    sDot.row(m_pimpl->controlledJointIdx) -= m_pimpl->c2 * (previousVelMannOutput.jointPositions - sDesired);
+
+    // assign the linear PID velocity output to be the future portion of the next MANN input
+    m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
+
     m_pimpl->velMannInput.jointVelocities = previousVelMannOutput.jointVelocities;
 
     // we set the base velocity to zero since we do not need to evaluate any quantity related to it
