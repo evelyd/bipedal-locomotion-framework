@@ -623,16 +623,15 @@ bool velMANNAutoregressive::setInput(const Input& input)
         m_pimpl->desiredTorsoAngle = 0.25;
     }
     Eigen::VectorXd sDesired = previousVelMannOutput.jointPositions;
-    sDesired(12) = m_pimpl->desiredTorsoAngle;
+    sDesired(m_pimpl->controlledJointIdx) = m_pimpl->desiredTorsoAngle;
 
     // Apply joint PID
     Eigen::VectorXd sDot = previousVelMannOutput.jointVelocities;
-    sDot.row(m_pimpl->controlledJointIdx) -= m_pimpl->c2 * (previousVelMannOutput.jointPositions - sDesired);
+    sDot(m_pimpl->controlledJointIdx) -= m_pimpl->c2 * (previousVelMannOutput.jointPositions(m_pimpl->controlledJointIdx) - sDesired(m_pimpl->controlledJointIdx));
 
     // assign the linear PID velocity output to be the future portion of the next MANN input
     m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
-
-    m_pimpl->velMannInput.jointVelocities = previousVelMannOutput.jointVelocities;
+    m_pimpl->velMannInput.jointVelocities = sDot;
 
     // we set the base velocity to zero since we do not need to evaluate any quantity related to it
     const Eigen::Matrix<double, 6, 1> baseVelocity = Eigen::Matrix<double, 6, 1>::Zero();
