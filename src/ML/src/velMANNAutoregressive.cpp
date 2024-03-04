@@ -129,6 +129,9 @@ struct velMANNAutoregressive::Impl
     // For joint PID
     const int controlledJointIdx = 12;
 
+    // For foot flattening
+    int contactIndex = 46;
+
     int rootIndex;
     int chestIndex;
 
@@ -757,9 +760,11 @@ bool velMANNAutoregressive::setInput(const Input& input)
         std::atan2((forwardDir.cross(desiredFutureBaseDirections3d.col(0)))(2),
         forwardDir.dot(desiredFutureBaseDirections3d.col(0)));
 
+    double currentPitch = iDynTree::Rotation(m_pimpl->state.I_H_B.quat().toRotationMatrix()).asRPY()(1);
+
     // Construct desired angle term of rotational PID equation
     manif::SE3d R_d = manif::SE3d(0, 0, 0, //xyz translation is unimportant
-                      0, -0.09, desYaw + refYaw);
+                      0, currentPitch, desYaw + refYaw);
 
     Eigen::Matrix3d R_mult = (R_d.inverse().compose(m_pimpl->state.I_H_B).quat().toRotationMatrix());
 
@@ -879,6 +884,49 @@ bool velMANNAutoregressive::advance()
         return false;
     }
 
+    manif::SE3d I_H_SS = BipedalLocomotion::Conversions::toManifPose(m_pimpl->kinDyn.getWorldTransform(m_pimpl->contactIndex));
+
+    // Get the z axis (expressed in world frame) of the support foot frame
+    Eigen::Vector3d I_z_I = Eigen::Vector3d::UnitZ();
+    Eigen::Vector3d I_z_SS = manif::SO3(I_H_SS.quat()).act(I_z_I);
+
+    // Get the axis of rotation from world to sole (unit normed for rotation matrix later)
+    Eigen::Vector3d I_rotAxis_SS = (I_z_I.cross(I_z_SS)).normalized();
+
+    // Get the angle of rotation along the axis of rotation
+    double rotAngle = I_z_SS.dot(I_z_I);
+    if (rotAngle > 1.0)
+    {
+        rotAngle = 1.0;
+    }
+    else if (rotAngle < -1.0)
+    {
+        rotAngle = -1.0;
+    }
+    double alpha = acos(rotAngle);
+
+    // Create rotation matrix from the angle axis representation
+    manif::SO3d flatteningRotation = manif::SO3d(Eigen::AngleAxis(alpha, I_rotAxis_SS).inverse());
+
+    // Use the correction to apply on the rotation obtained from the integrator
+    manif::SO3d integratedRotation = manif::SO3(m_pimpl->integrator.getSolution().get_from_hash<"LieGroup"_h>());
+    manif::SO3d correctedRotation = flatteningRotation.compose(integratedRotation);
+
+    manif::SE3d I_H_base_corrected
+        = manif::SE3d(I_H_base.translation(),
+                      correctedRotation);
+
+    if (!m_pimpl->kinDyn.setRobotState(I_H_base_corrected.transform(),
+                                       velMannOutput.jointPositions,
+                                       baseVelocity.coeffs(),
+                                       velMannOutput.jointVelocities,
+                                       m_pimpl->gravity))
+    {
+        log()->error("{} Unable to set the robot state in the kindyncomputations object.",
+                     logPrefix);
+        return false;
+    }
+
     // The following function evaluate the position of the corners of a foot in the inertial frame
     auto evaluateFootCornersPosition
         = [this](int index,
@@ -944,6 +992,8 @@ bool velMANNAutoregressive::advance()
         m_pimpl->state.projectedContactPositionInWorldFrame[1] = (*supportCorner)[1];
     }
 
+    m_pimpl->contactIndex = supportFootPtr->contact.index;
+
     // compute the base position with legged odometry
     const iDynTree::Transform base_H_supportFoot
         = m_pimpl->kinDyn.getRelativeTransform(m_pimpl->rootIndex, supportFootPtr->contact.index);
@@ -963,7 +1013,7 @@ bool velMANNAutoregressive::advance()
                                   m_pimpl->state.projectedContactPositionInWorldFrame));
     const iDynTree::Transform I_H_base_iDynTree = I_H_supportVertex * supportVertex_H_base;
 
-    I_H_base.translation(iDynTree::toEigen(I_H_base_iDynTree.getPosition()));
+    I_H_base_corrected.translation(iDynTree::toEigen(I_H_base_iDynTree.getPosition()));
 
     // compute the base velocity
     if (!m_pimpl->kinDyn.getFrameFreeFloatingJacobian(supportFootPtr->contact.index,
@@ -980,7 +1030,7 @@ bool velMANNAutoregressive::advance()
             * velMannOutput.jointVelocities);
 
     // update the kindyn object with the kinematically feasible base
-    if (!m_pimpl->kinDyn.setRobotState(I_H_base.transform(),
+    if (!m_pimpl->kinDyn.setRobotState(I_H_base_corrected.transform(),
                                        velMannOutput.jointPositions,
                                        baseVelocity.coeffs(),
                                        velMannOutput.jointVelocities,
@@ -1024,7 +1074,7 @@ bool velMANNAutoregressive::advance()
     }
     m_pimpl->state.rightFootState.schmittTriggerState = m_pimpl->rightFootSchmittTrigger.getState();
 
-    m_pimpl->state.I_H_B = I_H_base;
+    m_pimpl->state.I_H_B = I_H_base_corrected;
     m_pimpl->state.previousVelMannOutput = velMannOutput;
     m_pimpl->state.supportFoot = currentSupportFoot;
 
