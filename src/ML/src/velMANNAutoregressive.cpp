@@ -109,7 +109,7 @@ struct velMANNAutoregressive::Impl
     Eigen::MatrixXd supportFootJacobian;
 
     // For setting joint positions to initial
-    Eigen::VectorXd initial_joint_positions;
+    Eigen::VectorXd initialJointPositions;
 
     // For linear PID
     double radius;
@@ -124,7 +124,6 @@ struct velMANNAutoregressive::Impl
 
     // For joint PID
     double desiredTorsoAngle;
-    bool crouchingDesired = false;
     double c2;
 
     // For joint PID
@@ -491,7 +490,7 @@ bool velMANNAutoregressive::populateInitialAutoregressiveState(
 {
     constexpr auto logPrefix = "[velMANNAutoregressive::populateInitialAutoregressiveState]";
 
-    m_pimpl->initial_joint_positions = jointPositions;
+    m_pimpl->initialJointPositions = jointPositions;
 
     // set the base velocity to zero since we do not need to evaluate any quantity related to it
     Eigen::Matrix<double, 6, 1> baseVelocity;
@@ -607,12 +606,12 @@ bool velMANNAutoregressive::setInput(const Input& input)
     // if within the radius of the desired position, set input joint positions to a standing configuration
     if (m_pimpl->lambda_0 == 0.0)
     {
-        m_pimpl->velMannInput.jointPositions = m_pimpl->initial_joint_positions;
+        m_pimpl->velMannInput.jointPositions = m_pimpl->initialJointPositions;
     }
 
     //TODO remember to apply gradually if sudden doesn't work, copy python impl
     // Control the torso angle depending on user input
-    if (m_pimpl->crouchingDesired) //TODO connect it somehow to joypad inputs
+    if (input.desiredCrouchingStatus)
     {
         m_pimpl->desiredTorsoAngle = 0.6;
     }

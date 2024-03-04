@@ -35,7 +35,7 @@ struct velMANNDirectionalInput
     Eigen::Vector2d baseDirection;
 
     /**< The direction the base is facing. */
-    bool crouchingDesired;
+    bool desiredCrouchingStatus;
 };
 
 /**

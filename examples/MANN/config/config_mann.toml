@@ -33,7 +33,7 @@ past_projected_base_horizon = 1.0
 threshold_radius = 0.3
 linear_pid_gain = 0.5
 rotational_pid_gain = 0.5
-joint_pid_gain = 0.0
+joint_pid_gain = 6.0
 
 [LEFT_FOOT]
 number_of_corners = 4

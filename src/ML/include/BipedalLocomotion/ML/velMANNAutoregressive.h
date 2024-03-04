@@ -83,6 +83,9 @@ struct velMANNAutoregressiveInput
 
     /** Matrix containing the desired base angular velocity trajectory around the z axis (yaw). The columns denote the position at each time instant. */
     Eigen::RowVectorXd desiredFutureBaseAngVelocities;
+
+    /** Boolean indicating whether crouching is desired. True if crouching is desired and False otherwise. */
+    bool desiredCrouchingStatus;
 };
 
 /**

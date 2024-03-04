@@ -89,6 +89,8 @@ bool velMANNAutoregressiveInputBuilder::setInput(const Input& input)
 {
     constexpr auto logPrefix = "[velMANNAutoregressiveInputBuilder::setInput]";
 
+    m_pimpl->input.desiredCrouchingStatus = input.desiredCrouchingStatus;
+
     if (m_pimpl->fsm == Impl::FSM::Idle)
     {
         log()->error("{} Please initialize the class before calling setInput.", logPrefix);
@@ -130,9 +132,6 @@ bool velMANNAutoregressiveInputBuilder::setInput(const Input& input)
     m_pimpl->input.baseDirection[1] = m_pimpl->input.baseDirection[1] < 0
                                             ? -std::sin(maxBaseDirectionAngle)
                                             : std::sin(maxBaseDirectionAngle);
-
-    //TODO define the crouching bool here, then have to specify it in ipynb or with fake joypad
-    // m_pimpl->input.crouchingDesired; //maybe not needed to specify here since no proc necessary
 
     return true;
 }
@@ -362,6 +361,9 @@ bool velMANNAutoregressiveInputBuilder::advance()
     // [BASE ANGULAR VELOCITY EVALUATION] Step 3
     m_pimpl->output.desiredFutureBaseAngVelocities.col(m_pimpl->numberOfKnots - 1)
         = m_pimpl->output.desiredFutureBaseAngVelocities.col(m_pimpl->numberOfKnots - 2);
+
+    // Put the desired crouching status in the output
+    m_pimpl->output.desiredCrouchingStatus = m_pimpl->input.desiredCrouchingStatus;
 
     m_pimpl->fsm = Impl::FSM::OutputValid;
 
