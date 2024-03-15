@@ -78,12 +78,6 @@ velMANNAutoregressive::AutoregressiveState::generateDummyAutoregressiveState(
 
     autoregressiveState.time = std::chrono::nanoseconds::zero();
 
-    // for linear PID
-    autoregressiveState.I_x_des = I_H_B.translation().topRows(2);
-
-    // for rotational PID
-    autoregressiveState.I_H_ref = I_H_B;
-
     return autoregressiveState;
 }
 
@@ -108,22 +102,6 @@ struct velMANNAutoregressive::Impl
 
     AutoregressiveState state;
     Eigen::MatrixXd supportFootJacobian;
-
-    // For setting joint positions to initial
-    Eigen::VectorXd initial_joint_positions;
-    Eigen::VectorXd initialStoppingJointPositions;
-
-    // For linear PID
-    double radius;
-    double c1;
-    Eigen::Matrix2Xd previousDesiredVel = Eigen::Matrix2Xd::Zero(2, projectedBaseDatapoints);
-    double lambda_0 = 0.0;
-    Eigen::Vector3d previousXDot = Eigen::Vector3d::Zero();
-
-    // For rotational PID
-    double c0;
-    Eigen::RowVectorXd previousDesiredAngVel = Eigen::VectorXd::Zero(projectedBaseDatapoints);
-    Eigen::Vector3d previousOmegaE = Eigen::Vector3d::Zero();
 
     int rootIndex;
     int chestIndex;
@@ -391,30 +369,6 @@ bool velMANNAutoregressive::initialize(
         return false;
     }
 
-    if (!ptr->getParameter("rotational_pid_gain", m_pimpl->c0))
-    {
-        log()->error("{} Unable to find the parameter named '{}'.",
-                     logPrefix,
-                     "rotational_pid_gain");
-        return false;
-    }
-
-    if (!ptr->getParameter("threshold_radius", m_pimpl->radius))
-    {
-        log()->error("{} Unable to find the parameter named '{}'.",
-                     logPrefix,
-                     "threshold_radius");
-        return false;
-    }
-
-    if (!ptr->getParameter("linear_pid_gain", m_pimpl->c1))
-    {
-        log()->error("{} Unable to find the parameter named '{}'.",
-                     logPrefix,
-                     "linear_pid_gain");
-        return false;
-    }
-
     // the gravity is not used by this class, however the kindyn computation object requires this
     // information when the internal state is updated. For this reason we avoid allocating the
     // memory every cycle and we keep it here.
@@ -477,9 +431,6 @@ bool velMANNAutoregressive::populateInitialAutoregressiveState(
     velMANNAutoregressive::AutoregressiveState& state)
 {
     constexpr auto logPrefix = "[velMANNAutoregressive::populateInitialAutoregressiveState]";
-
-    m_pimpl->initial_joint_positions = jointPositions;
-    m_pimpl->initialStoppingJointPositions = jointPositions;
 
     // set the base velocity to zero since we do not need to evaluate any quantity related to it
     Eigen::Matrix<double, 6, 1> baseVelocity;
@@ -592,26 +543,7 @@ bool velMANNAutoregressive::setInput(const Input& input)
     const velMANNOutput& previousVelMannOutput = m_pimpl->state.previousVelMannOutput;
 
     // the joint positions and velocities are considered as new input
-    // if within the radius of the desired position, set input joint positions to a standing configuration
-    std::chrono::nanoseconds threshold = std::chrono::seconds(1);
-    double time_change;
-    if (m_pimpl->lambda_0 == 0.0)
-    {
-        if ((m_pimpl->currentTime - m_pimpl->stopTime) <= threshold)
-        {
-            time_change = static_cast<double>((m_pimpl->currentTime - m_pimpl->stopTime).count()) / 1e9;
-            m_pimpl->velMannInput.jointPositions = m_pimpl->initialStoppingJointPositions + \
-                (m_pimpl->initial_joint_positions - m_pimpl->initialStoppingJointPositions) * time_change;
-        }
-        else
-        {
-            m_pimpl->velMannInput.jointPositions = m_pimpl->initial_joint_positions;
-        }
-    }
-    else
-    {
-        m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
-    }
+    m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
     m_pimpl->velMannInput.jointVelocities = previousVelMannOutput.jointVelocities;
 
     // we set the base velocity to zero since we do not need to evaluate any quantity related to it
@@ -677,97 +609,9 @@ bool velMANNAutoregressive::setInput(const Input& input)
                        m_pimpl->velMannInput.baseAngularVelocityTrajectory.leftCols(
                            halfProjectedBasedHorizon));
 
-    // If the user input changed between the previous timestep and now, update the reference frame
-    const double newInputThresh = 1e-5;
-    m_pimpl->previousDesiredVel.resize(2, input.desiredFutureBaseVelocities.cols());
-
-    const double des_B_scaling = 2.5;
-
-    if ((m_pimpl->previousDesiredVel - input.desiredFutureBaseVelocities).norm() >= newInputThresh)
-    {
-        //update desired base position in base frame
-        Eigen::Vector2d B_x_des = des_B_scaling * input.desiredFutureBaseTrajectory.rightCols(1);
-
-        //get z rotation in 2d
-        const double I_yaw_B = iDynTree::Rotation(m_pimpl->state.I_H_B.quat().toRotationMatrix()).asRPY()(2);
-        manif::SO2d I_yaw_rotation_B(I_yaw_B);
-
-        //rotate des x b into world frame (still 2d), then add 3rd dim later, which will be 0
-        m_pimpl->state.I_x_des = I_yaw_rotation_B.act(B_x_des) + m_pimpl->state.I_H_B.translation().topRows(2);
-    }
-
-    //create the error term, where z error is 0 because it's not controlled
-    const double I_yaw_B = iDynTree::Rotation(m_pimpl->state.I_H_B.quat().toRotationMatrix()).asRPY()(2);
-    manif::SO2d I_yaw_rotation_B(I_yaw_B);
-    Eigen::Vector2d I_positionError = m_pimpl->state.I_H_B.translation().topRows(2) - m_pimpl->state.I_x_des;
-    Eigen::Vector3d B_positionError = (Eigen::Vector3d() << I_yaw_rotation_B.inverse().act(I_positionError),
-                                                            0).finished();
-
-    // Check if there is no user input or if the robot reached the desired position
-    if (input.desiredFutureBaseTrajectory.rightCols(1) == (Eigen::Vector2d::Zero()) || I_positionError.norm() <= m_pimpl->radius)
-    {
-        if (m_pimpl->lambda_0 == 1.0)
-        {
-            m_pimpl->stopTime = m_pimpl->currentTime;
-            m_pimpl->initialStoppingJointPositions = previousVelMannOutput.jointPositions;
-        }
-        m_pimpl->lambda_0 = 0.0;
-    }
-    else
-    {
-        m_pimpl->lambda_0 = 1.0;
-    }
-    // Apply linear PID
-    Eigen::Matrix3Xd xDot(3, input.desiredFutureBaseTrajectory.cols());
-    for (int i = 0; i < input.desiredFutureBaseTrajectory.cols(); i++)
-    {
-        xDot.col(i) = m_pimpl->lambda_0 * (previousVelMannOutput.futureBaseLinearVelocityTrajectory.col(i) - m_pimpl->c1 * B_positionError);
-    }
-
-    // assign the linear PID velocity output to be the future portion of the next MANN input
-    m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon) = xDot.rightCols(halfProjectedBasedHorizon);
-
-    m_pimpl->previousXDot = xDot.col(0);
-    m_pimpl->previousDesiredVel = input.desiredFutureBaseVelocities;
-
-    // If the user input changed between the previous timestep and now, update the reference frame
-    m_pimpl->previousDesiredAngVel.resize(input.desiredFutureBaseAngVelocities.cols());
-
-    if ((m_pimpl->previousDesiredAngVel - input.desiredFutureBaseAngVelocities).norm() >= newInputThresh)
-    {
-        m_pimpl->state.I_H_ref = m_pimpl->state.I_H_B;
-    }
-
-    const double refYaw = (iDynTree::Rotation(m_pimpl->state.I_H_ref.quat().toRotationMatrix()).asRPY())(2);
-
-    Eigen::Matrix3Xd desiredFutureBaseDirections3d = (Eigen::Matrix3Xd(input.desiredFutureBaseDirections.rows() + 1, input.desiredFutureBaseDirections.cols()) << input.desiredFutureBaseDirections, Eigen::RowVectorXd::Zero(input.desiredFutureBaseDirections.cols())).finished();
-    Eigen::Vector3d forwardDir(1, 0, 0);
-    const double desYaw =
-        std::atan2((forwardDir.cross(desiredFutureBaseDirections3d.col(0)))(2),
-        forwardDir.dot(desiredFutureBaseDirections3d.col(0)));
-
-    // Construct desired angle term of rotational PID equation
-    manif::SE3d R_d = manif::SE3d(0, 0, 0, //xyz translation is unimportant
-                      0, -0.09, desYaw + refYaw);
-
-    Eigen::Matrix3d R_mult = (R_d.inverse().compose(m_pimpl->state.I_H_B).quat().toRotationMatrix());
-
-    Eigen::Matrix3d Sk = ((R_mult - R_mult.inverse())/2);
-    Eigen::Vector3d Skv(Sk(2,1), Sk(0,2), Sk(1,0));
-
-    // Apply rotational PID
-    Eigen::Matrix3Xd omega_E(3, input.desiredFutureBaseDirections.cols());
-    for (int i = 0; i < input.desiredFutureBaseDirections.cols(); i++)
-    {
-        omega_E.col(i) = m_pimpl->lambda_0 * (previousVelMannOutput.futureBaseAngularVelocityTrajectory.col(i) - m_pimpl->c0 * Skv);
-    }
-
-    // assign the rotational PID angular velocity output to be the future portion of the next MANN input
-    m_pimpl->velMannInput.baseAngularVelocityTrajectory.rightCols(halfProjectedBasedHorizon) = omega_E.rightCols(halfProjectedBasedHorizon);
-
-    // Save PID controller output for use in base orientation update
-    m_pimpl->previousOmegaE = omega_E.col(0);
-    m_pimpl->previousDesiredAngVel = input.desiredFutureBaseAngVelocities;
+    // Assign the future of the MANN input to be the desired velocities
+    m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon) << input.desiredFutureBaseVelocities.rightCols(halfProjectedBasedHorizon), previousVelMannOutput.futureBaseLinearVelocityTrajectory.bottomRows(1).rightCols(halfProjectedBasedHorizon);
+    m_pimpl->velMannInput.baseAngularVelocityTrajectory.rightCols(halfProjectedBasedHorizon+1) << previousVelMannOutput.futureBaseAngularVelocityTrajectory.topRows(2), input.desiredFutureBaseAngVelocities;
 
     if (!m_pimpl->velMann.setInput(m_pimpl->velMannInput))
     {
@@ -835,8 +679,8 @@ bool velMANNAutoregressive::advance()
     // Integrate the base orientation
     // if the robot is stopped (i.e, if the current velMANN input and the previous one are the same)
     // we set the yaw rate equal to zero
-    const manif::SO3Tangentd baseAngularVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(m_pimpl->previousOmegaE);
-    const manif::SO3Tangentd baseLinearVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(m_pimpl->previousXDot);
+    const manif::SO3Tangentd baseAngularVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(velMannOutput.futureBaseAngularVelocityTrajectory.col(0));
+    const manif::SO3Tangentd baseLinearVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(velMannOutput.futureBaseLinearVelocityTrajectory.col(0));
     if (!m_pimpl->baseOrientationDynamics->setControlInput({baseAngularVelocity}))
     {
         log()->error("{} Unable to set the control input to the base orientation dynamics.",
