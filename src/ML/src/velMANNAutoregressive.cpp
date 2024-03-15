@@ -118,6 +118,7 @@ struct velMANNAutoregressive::Impl
     double c1;
     Eigen::Matrix2Xd previousDesiredVel = Eigen::Matrix2Xd::Zero(2, projectedBaseDatapoints);
     double lambda_0 = 0.0;
+    Eigen::Vector3d previousXDot = Eigen::Vector3d::Zero();
 
     // For rotational PID
     double c0;
@@ -726,6 +727,7 @@ bool velMANNAutoregressive::setInput(const Input& input)
     // assign the linear PID velocity output to be the future portion of the next MANN input
     m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon) = xDot.rightCols(halfProjectedBasedHorizon);
 
+    m_pimpl->previousXDot = xDot.col(0);
     m_pimpl->previousDesiredVel = input.desiredFutureBaseVelocities;
 
     // If the user input changed between the previous timestep and now, update the reference frame
@@ -834,6 +836,7 @@ bool velMANNAutoregressive::advance()
     // if the robot is stopped (i.e, if the current velMANN input and the previous one are the same)
     // we set the yaw rate equal to zero
     const manif::SO3Tangentd baseAngularVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(m_pimpl->previousOmegaE);
+    const manif::SO3Tangentd baseLinearVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(m_pimpl->previousXDot);
     if (!m_pimpl->baseOrientationDynamics->setControlInput({baseAngularVelocity}))
     {
         log()->error("{} Unable to set the control input to the base orientation dynamics.",
@@ -950,7 +953,9 @@ bool velMANNAutoregressive::advance()
                                   m_pimpl->state.projectedContactPositionInWorldFrame));
     const iDynTree::Transform I_H_base_iDynTree = I_H_supportVertex * supportVertex_H_base;
 
-    I_H_base.translation(iDynTree::toEigen(I_H_base_iDynTree.getPosition()));
+    // I_H_base.translation(iDynTree::toEigen(I_H_base_iDynTree.getPosition()));
+    Eigen::Vector3d integratedTranslation = I_H_base.translation() + std::chrono::duration<double>(m_pimpl->dT).count() * baseLinearVelocity.coeffs();
+    I_H_base.translation(integratedTranslation);
 
     // compute the base velocity
     if (!m_pimpl->kinDyn.getFrameFreeFloatingJacobian(supportFootPtr->contact.index,
