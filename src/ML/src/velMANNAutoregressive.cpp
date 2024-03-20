@@ -679,7 +679,7 @@ bool velMANNAutoregressive::advance()
     // Integrate the base orientation
     // if the robot is stopped (i.e, if the current velMANN input and the previous one are the same)
     // we set the yaw rate equal to zero
-    const manif::SO3Tangentd baseAngularVelocity = m_pimpl->isRobotStopped ? Eigen::Vector3d{0, 0, 0} : manif::SO3d(m_pimpl->state.I_H_B.quat()).act(velMannOutput.futureBaseAngularVelocityTrajectory.col(0));
+    const manif::SO3Tangentd baseAngularVelocity = Eigen::Vector3d{0, 0, 0};
     if (!m_pimpl->baseOrientationDynamics->setControlInput({baseAngularVelocity}))
     {
         log()->error("{} Unable to set the control input to the base orientation dynamics.",
