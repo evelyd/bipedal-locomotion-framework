@@ -610,8 +610,10 @@ bool velMANNAutoregressive::setInput(const Input& input)
                            halfProjectedBasedHorizon));
 
     // Assign the future of the MANN input to be the desired velocities
-    m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon) << input.desiredFutureBaseVelocities.rightCols(halfProjectedBasedHorizon), previousVelMannOutput.futureBaseLinearVelocityTrajectory.bottomRows(1).rightCols(halfProjectedBasedHorizon);
-    m_pimpl->velMannInput.baseAngularVelocityTrajectory.rightCols(halfProjectedBasedHorizon+1) << previousVelMannOutput.futureBaseAngularVelocityTrajectory.topRows(2), input.desiredFutureBaseAngVelocities;
+    // m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon) << input.desiredFutureBaseVelocities.rightCols(halfProjectedBasedHorizon), previousVelMannOutput.futureBaseLinearVelocityTrajectory.bottomRows(1).rightCols(halfProjectedBasedHorizon);
+    // m_pimpl->velMannInput.baseAngularVelocityTrajectory.rightCols(halfProjectedBasedHorizon+1) << previousVelMannOutput.futureBaseAngularVelocityTrajectory.topRows(2), input.desiredFutureBaseAngVelocities;
+    m_pimpl->velMannInput.baseLinearVelocityTrajectory.rightCols(halfProjectedBasedHorizon+1) << input.desiredFutureBaseVelocities.rightCols(halfProjectedBasedHorizon+1), Eigen::MatrixXd::Zero(1, halfProjectedBasedHorizon+1);
+    m_pimpl->velMannInput.baseAngularVelocityTrajectory.rightCols(halfProjectedBasedHorizon+1) << Eigen::MatrixXd::Zero(2, halfProjectedBasedHorizon+1), input.desiredFutureBaseAngVelocities;
 
     if (!m_pimpl->velMann.setInput(m_pimpl->velMannInput))
     {
