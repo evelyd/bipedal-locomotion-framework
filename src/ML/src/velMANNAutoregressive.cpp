@@ -421,6 +421,8 @@ bool velMANNAutoregressive::initialize(
     m_pimpl->velMannInput.baseAngularVelocityTrajectory.resize(3, m_pimpl->projectedBaseDatapoints);
     m_pimpl->velMannInput.jointPositions.resize(m_pimpl->kinDyn.getNrOfDegreesOfFreedom());
     m_pimpl->velMannInput.jointVelocities.resize(m_pimpl->kinDyn.getNrOfDegreesOfFreedom());
+    m_pimpl->velMannInput.basePosition = Eigen::Vector3d(0.0, 0.0, 0.7748); //TODO is this ht correct?
+    m_pimpl->velMannInput.baseAngle = Eigen::Vector3d::Zero();
 
     return ok;
 }
@@ -545,6 +547,8 @@ bool velMANNAutoregressive::setInput(const Input& input)
     // the joint positions and velocities are considered as new input
     m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
     m_pimpl->velMannInput.jointVelocities = previousVelMannOutput.jointVelocities;
+    m_pimpl->velMannInput.basePosition = previousVelMannOutput.basePosition;
+    m_pimpl->velMannInput.baseAngle = previousVelMannOutput.baseAngle;
 
     // we set the base velocity to zero since we do not need to evaluate any quantity related to it
     const Eigen::Matrix<double, 6, 1> baseVelocity = Eigen::Matrix<double, 6, 1>::Zero();
