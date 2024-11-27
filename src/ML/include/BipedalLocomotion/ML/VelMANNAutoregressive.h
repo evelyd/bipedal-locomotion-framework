@@ -59,30 +59,22 @@ struct VelMANNFootState
 };
 
 /**
- * VelMANNAutoregressiveInput contains the unput to VelMANN network when used in autoregressive fashion.
- * The base position trajectory, base direction trajectory and base velocity trajectories are
- * written in a bidimensional local reference frame L in which we assume all the quantities related
- * to the ground-projected base trajectory in xi and yi to be expressed. At each step ti,
- * L is defined to have its origin in the current ground-projected robot base position and
- * orientation defined by the current base direction (along with its orthogonal vector).
+ * VelMANNAutoregressiveInput contains the input to VelMANN network when used in autoregressive fashion.
+ * It contains the human base pose and velocity information, expressed in the robot base frame.
  */
 struct VelMANNAutoregressiveInput
 {
-    /** Matrix containing the future desired position trajectory. The rows contain the x and y
-     * position projected into the ground while the columns the position at each time instant. */
-    Eigen::Matrix2Xd desiredFutureBaseTrajectory;
+    /**< The human base position in the robot base frame. */
+    Eigen::Vector3d humanBasePosition;
 
-    /** Matrix containing the desired future base direction trajectory. The rows contain the x and
-     * y direction projected into the ground while the columns the direction at each time instant.
-     */
-    Eigen::Matrix2Xd desiredFutureBaseDirections;
+    /**< The human base Euler angles in the robot base frame. */
+    Eigen::Vector3d humanBaseAngle;
 
-    /** Matrix containing the desired base velocity trajectory. The rows contain the x and y
-     * velocity projected into the ground while the columns the position at each time instant. */
-    Eigen::Matrix2Xd desiredFutureBaseVelocities;
+    /**< The human base linear velocity in the robot base frame. */
+    Eigen::Vector3d humanBaseLinearVelocity;
 
-    /** Matrix containing the desired base angular velocity trajectory around the z axis (yaw). The columns denote the position at each time instant. */
-    Eigen::RowVectorXd desiredFutureBaseAngVelocities;
+    /**< The human base angular velocity in the robot base frame. */
+    Eigen::Vector3d humanBaseAngularVelocity;
 };
 
 /**

@@ -30,14 +30,14 @@ void CreateVelMANNAutoregressive(pybind11::module& module)
 
     py::class_<ML::VelMANNAutoregressiveInput>(module, "VelMANNAutoregressiveInput")
         .def(py::init())
-        .def_readwrite("desired_future_base_trajectory",
-                       &ML::VelMANNAutoregressiveInput::desiredFutureBaseTrajectory)
-        .def_readwrite("desired_future_base_directions",
-                       &ML::VelMANNAutoregressiveInput::desiredFutureBaseDirections)
-        .def_readwrite("desired_future_base_velocities",
-                       &ML::VelMANNAutoregressiveInput::desiredFutureBaseVelocities)
-        .def_readwrite("desired_future_base_angular_velocities",
-                       &ML::VelMANNAutoregressiveInput::desiredFutureBaseAngVelocities);
+        .def_readwrite("human_base_position",
+                       &ML::VelMANNAutoregressiveInput::humanBasePosition)
+        .def_readwrite("human_base_angle",
+                       &ML::VelMANNAutoregressiveInput::humanBaseAngle)
+        .def_readwrite("human_base_linear_velocity",
+                       &ML::VelMANNAutoregressiveInput::humanBaseLinearVelocity)
+        .def_readwrite("human_base_angular_velocity",
+                       &ML::VelMANNAutoregressiveInput::humanBaseAngularVelocity);
 
     py::class_<ML::VelMANNAutoregressiveOutput>(module, "VelMANNAutoregressiveOutput")
         .def(py::init())

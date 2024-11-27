@@ -31,6 +31,11 @@ VelMANNInput VelMANNInput::generateDummyVelMANNInput(Eigen::Ref<const Eigen::Vec
     input.baseAngularVelocityTrajectory = Eigen::Matrix3Xd::Zero(3, projectedBaseHorizon);
     input.basePosition = Eigen::Vector3d(0.0, 0.0, 0.7748); //TODO should these have correct ht?
     input.baseAngle = Eigen::Vector3d::Zero();
+    //TODO these are from actual data except for vels
+    input.humanBasePosition = Eigen::Vector3d(1.36230472, -0.04849973, 0.30465086); // Eigen::Vector3d(1.2, 0.0, 0.917163 - 0.7748);
+    input.humanBaseAngle = Eigen::Vector3d(-0.05948441, 0.33211389, 3.11758595); //180 deg in z
+    input.humanBaseLinearVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
+    input.humanBaseAngularVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
 
     return input;
 }
@@ -243,7 +248,9 @@ bool VelMANN::initialize(
                                                               // coordinates in the horizon
                                   + numberOfJoints // joint positions
                                   + numberOfJoints // joint velocities
-                                  + 6; //base position and euler angles
+                                  + 6 //base position and euler angles
+                                  + 6 //human base position and euler angles
+                                  + 6; //human base linear and angular velocities
 
     // resize the input
     m_pimpl->structuredInput.rawData.resize(inputSize);
@@ -266,6 +273,10 @@ bool VelMANN::initialize(
     m_pimpl->structuredInput.handler.addVariable("joint_velocities", numberOfJoints);
     m_pimpl->structuredInput.handler.addVariable("base_position", 3);
     m_pimpl->structuredInput.handler.addVariable("base_angle", 3);
+    m_pimpl->structuredInput.handler.addVariable("human_base_position", 3);
+    m_pimpl->structuredInput.handler.addVariable("human_base_angle", 3);
+    m_pimpl->structuredInput.handler.addVariable("human_base_linear_velocity", 3);
+    m_pimpl->structuredInput.handler.addVariable("human_base_angular_velocity", 3);
 
     // populate the output
     const std::size_t outputSize = 3 * (1 + projectedBaseDatapoints / 2) // linear velocity of the base in xyz

@@ -11,9 +11,9 @@
 #include <memory>
 
 #include <Eigen/Dense>
+#include <manif/SE3.h>
 
 #include <BipedalLocomotion/ML/VelMANNAutoregressive.h>
-#include <BipedalLocomotion/ParametersHandler/IParametersHandler.h>
 #include <BipedalLocomotion/System/Advanceable.h>
 
 namespace BipedalLocomotion
@@ -26,13 +26,19 @@ namespace ML
  * This structure holds the motion direction and base direction as 2D vectors.
  */
 
-struct VelMANNDirectionalInput
+struct VelMANNHumanInput
 {
-    /**< The direction of motion. */
-    Eigen::Vector2d motionDirection;
+    /**< The human base position in the robot base frame. */
+    Eigen::Vector3d humanBasePosition;
 
-    /**< The direction the base is facing. */
-    Eigen::Vector2d baseDirection;
+    /**< The human base Euler angles in the robot base frame. */
+    Eigen::Vector3d humanBaseAngle;
+
+    /**< The human base linear velocity in the robot base frame. */
+    Eigen::Vector3d humanBaseLinearVelocity;
+
+    /**< The human base angular velocity in the robot base frame. */
+    Eigen::Vector3d humanBaseAngularVelocity;
 };
 
 /**
@@ -40,7 +46,7 @@ struct VelMANNDirectionalInput
  * inputs.
  */
 class VelMANNAutoregressiveInputBuilder
-    : public System::Advanceable<VelMANNDirectionalInput, VelMANNAutoregressiveInput>
+    : public System::Advanceable<VelMANNHumanInput, VelMANNAutoregressiveInput>
 {
 public:
     /**
@@ -56,7 +62,6 @@ public:
     // clang-format off
     /**
      * Initialize the trajectory builder..
-     * @param paramHandler pointer to the parameters handler.
      * @note the following parameters are required by the class
      * |                  Parameter Name                 |   Type   |                                           Description                                           | Mandatory |
      * |:-----------------------------------------------:|:--------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------:|:---------:|

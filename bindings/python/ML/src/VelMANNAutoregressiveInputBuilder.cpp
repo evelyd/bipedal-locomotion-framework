@@ -26,16 +26,18 @@ void CreateVelMANNAutoregressiveInputBuilder(pybind11::module& module)
     namespace ML = BipedalLocomotion::ML;
     namespace System = BipedalLocomotion::System;
 
-    py::class_<ML::VelMANNDirectionalInput>(module, "VelMANNDirectionalInput")
+    py::class_<ML::VelMANNHumanInput>(module, "VelMANNHumanInput")
         .def(py::init())
-        .def_readwrite("motion_direction", &ML::VelMANNDirectionalInput::motionDirection)
-        .def_readwrite("base_direction", &ML::VelMANNDirectionalInput::baseDirection);
+        .def_readwrite("human_base_position", &ML::VelMANNHumanInput::humanBasePosition)
+        .def_readwrite("human_base_angle", &ML::VelMANNHumanInput::humanBaseAngle)
+        .def_readwrite("human_base_linear_velocity", &ML::VelMANNHumanInput::humanBaseLinearVelocity)
+        .def_readwrite("human_base_angular_velocity", &ML::VelMANNHumanInput::humanBaseAngularVelocity);
 
-    BipedalLocomotion::bindings::System::CreateAdvanceable<ML::VelMANNDirectionalInput, //
+    BipedalLocomotion::bindings::System::CreateAdvanceable<ML::VelMANNHumanInput, //
                                                            ML::VelMANNAutoregressiveInput> //
         (module, "VelMANNAutoregressiveInputBuilder");
     py::class_<ML::VelMANNAutoregressiveInputBuilder,
-               System::Advanceable<ML::VelMANNDirectionalInput, //
+               System::Advanceable<ML::VelMANNHumanInput, //
                                    ML::VelMANNAutoregressiveInput>>(module,
                                                                  "VelMANNAutoregressiveInputBuilder")
         .def(py::init());

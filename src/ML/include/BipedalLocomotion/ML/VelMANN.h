@@ -44,6 +44,14 @@ struct VelMANNInput
     Eigen::Vector3d basePosition; /**< Vector containing the actual base position in m */
     Eigen::Vector3d baseAngle; /**< Vector containing the actual base euler angles in radians */
 
+    Eigen::Vector3d humanBasePosition; /**< Vector containing the human base position in m */
+    Eigen::Vector3d humanBaseAngle; /**< Vector containing the human base euler angles in radians */
+
+    Eigen::Vector3d humanBaseLinearVelocity; /**< Vector containing the human base linear velocity
+                                        in m/s */
+    Eigen::Vector3d humanBaseAngularVelocity; /**< Vector containing the human base angular velocity
+                                        in rad/s */
+
     /**
      * Generate a dummy VelMANNInput from a given joint configuration
      * @param jointPositions vector containing the joint position in radians.

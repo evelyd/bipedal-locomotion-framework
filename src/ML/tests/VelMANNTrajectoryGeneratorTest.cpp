@@ -54,9 +54,9 @@ TEST_CASE("VelMANNTrajectoryGenerator")
     handler->setParameter("forward_direction", "x");
     handler->setParameter("mocap_frame_rate", 50);
     handler->setParameter("past_projected_base_horizon", 1s);
-    handler->setParameter("threshold_radius", 0.3);
-    handler->setParameter("linear_pid_gain", 0.2);
-    handler->setParameter("rotational_pid_gain", 2.0);
+    // handler->setParameter("threshold_radius", 0.3);
+    // handler->setParameter("linear_pid_gain", 0.2);
+    // handler->setParameter("rotational_pid_gain", 2.0);
 
     auto leftFootGroup = std::make_shared<StdImplementation>();
     leftFootGroup->setParameter("number_of_corners", 4);
@@ -90,20 +90,11 @@ TEST_CASE("VelMANNTrajectoryGenerator")
 
     // input to generate a forward direction
     VelMANNTrajectoryGeneratorInput generatorInput;
-    generatorInput.desiredFutureBaseTrajectory.resize(2, 7);
-    generatorInput.desiredFutureBaseVelocities.resize(2, 7);
-    generatorInput.desiredFutureBaseDirections.resize(2, 7);
-    generatorInput.desiredFutureBaseAngVelocities.resize(7);
-    generatorInput.desiredFutureBaseTrajectory << 0, 0.12, 0.22, 0.3, 0.35, 0.39, 0.4, 0, 0, 0, 0,
-        0, 0, 0;
-    generatorInput.desiredFutureBaseAngVelocities << 0, 0, 0, 0, 0, 0, 0;
+    generatorInput.humanBasePosition = Eigen::Vector3d(1.36230472, -0.04849973, 0.30465086); // Eigen::Vector3d(1.2, 0.0, 0.917163 - 0.7748);
+    generatorInput.humanBaseAngle = Eigen::Vector3d(-0.05948441, 0.33211389, 3.11758595); //180 deg in z
+    generatorInput.humanBaseLinearVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
+    generatorInput.humanBaseAngularVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
     generatorInput.mergePointIndex = 0;
-
-    for (int i = 0; i < generatorInput.desiredFutureBaseDirections.cols(); i++)
-    {
-        generatorInput.desiredFutureBaseDirections.col(i) << 1.0, 0;
-        generatorInput.desiredFutureBaseVelocities.col(i) << 0.4, 0;
-    }
 
     const manif::SE3d basePose = manif::SE3d(Eigen::Vector3d{0, 0, 0.7748},
                                              Eigen::AngleAxis(0.0, Eigen::Vector3d::UnitY()));
