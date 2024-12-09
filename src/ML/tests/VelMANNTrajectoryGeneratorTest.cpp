@@ -91,7 +91,10 @@ TEST_CASE("VelMANNTrajectoryGenerator")
     // input to generate a forward direction
     VelMANNTrajectoryGeneratorInput generatorInput;
     generatorInput.humanBasePosition = Eigen::Vector3d(1.36230472, -0.04849973, 0.30465086); // Eigen::Vector3d(1.2, 0.0, 0.917163 - 0.7748);
-    generatorInput.humanBaseAngle = Eigen::Vector3d(-0.05948441, 0.33211389, 3.11758595); //180 deg in z
+    generatorInput.humanBaseRotation = Eigen::Matrix3d::Identity();
+    generatorInput.humanBaseRotation << -0.9450828, -0.0226927, 0.3260421,
+                               0.0433393, -0.9974784, 0.0562007,
+                               0.3239446, 0.0672448, 0.9436832; //180 deg in z
     generatorInput.humanBaseLinearVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
     generatorInput.humanBaseAngularVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
     generatorInput.mergePointIndex = 0;

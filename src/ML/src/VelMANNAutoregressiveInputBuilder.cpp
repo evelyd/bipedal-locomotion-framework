@@ -97,7 +97,7 @@ bool VelMANNAutoregressiveInputBuilder::setInput(const Input& input)
 
     // Eigen normalized handles the case in which the input is almost zero
     m_pimpl->input.humanBasePosition = input.humanBasePosition; //TODO normalization not needed since it's not a direction, right?
-    m_pimpl->input.humanBaseAngle = input.humanBaseAngle;
+    m_pimpl->input.humanBaseRotation = input.humanBaseRotation;
     m_pimpl->input.humanBaseLinearVelocity = input.humanBaseLinearVelocity;
     m_pimpl->input.humanBaseAngularVelocity = input.humanBaseAngularVelocity;
 
@@ -280,7 +280,7 @@ bool VelMANNAutoregressiveInputBuilder::advance()
 
     //TODO no need to compute velocities, just assign values
     m_pimpl->output.humanBasePosition = m_pimpl->input.humanBasePosition;
-    m_pimpl->output.humanBaseAngle = m_pimpl->input.humanBaseAngle;
+    m_pimpl->output.humanBaseRotation = m_pimpl->input.humanBaseRotation;
     m_pimpl->output.humanBaseLinearVelocity = m_pimpl->input.humanBaseLinearVelocity;
     m_pimpl->output.humanBaseAngularVelocity = m_pimpl->input.humanBaseAngularVelocity;
 

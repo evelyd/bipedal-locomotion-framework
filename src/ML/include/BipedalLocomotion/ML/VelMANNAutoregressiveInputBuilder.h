@@ -32,7 +32,7 @@ struct VelMANNHumanInput
     Eigen::Vector3d humanBasePosition;
 
     /**< The human base Euler angles in the robot base frame. */
-    Eigen::Vector3d humanBaseAngle;
+    Eigen::Matrix3d humanBaseRotation;
 
     /**< The human base linear velocity in the robot base frame. */
     Eigen::Vector3d humanBaseLinearVelocity;

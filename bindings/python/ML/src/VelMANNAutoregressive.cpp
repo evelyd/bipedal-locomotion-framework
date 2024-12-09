@@ -32,8 +32,8 @@ void CreateVelMANNAutoregressive(pybind11::module& module)
         .def(py::init())
         .def_readwrite("human_base_position",
                        &ML::VelMANNAutoregressiveInput::humanBasePosition)
-        .def_readwrite("human_base_angle",
-                       &ML::VelMANNAutoregressiveInput::humanBaseAngle)
+        .def_readwrite("human_base_rotation",
+                       &ML::VelMANNAutoregressiveInput::humanBaseRotation)
         .def_readwrite("human_base_linear_velocity",
                        &ML::VelMANNAutoregressiveInput::humanBaseLinearVelocity)
         .def_readwrite("human_base_angular_velocity",

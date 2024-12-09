@@ -29,7 +29,7 @@ void CreateVelMANNAutoregressiveInputBuilder(pybind11::module& module)
     py::class_<ML::VelMANNHumanInput>(module, "VelMANNHumanInput")
         .def(py::init())
         .def_readwrite("human_base_position", &ML::VelMANNHumanInput::humanBasePosition)
-        .def_readwrite("human_base_angle", &ML::VelMANNHumanInput::humanBaseAngle)
+        .def_readwrite("human_base_rotation", &ML::VelMANNHumanInput::humanBaseRotation)
         .def_readwrite("human_base_linear_velocity", &ML::VelMANNHumanInput::humanBaseLinearVelocity)
         .def_readwrite("human_base_angular_velocity", &ML::VelMANNHumanInput::humanBaseAngularVelocity);
 

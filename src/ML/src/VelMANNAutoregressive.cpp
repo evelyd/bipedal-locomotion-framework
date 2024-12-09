@@ -467,7 +467,7 @@ bool VelMANNAutoregressive::initialize(
     m_pimpl->velMannInput.jointPositions.resize(m_pimpl->kinDyn.getNrOfDegreesOfFreedom());
     m_pimpl->velMannInput.jointVelocities.resize(m_pimpl->kinDyn.getNrOfDegreesOfFreedom());
     m_pimpl->velMannInput.basePosition = Eigen::Vector3d(0.0, 0.0, 0.7748); //TODO is this ht correct?
-    m_pimpl->velMannInput.baseAngle = Eigen::Vector3d::Zero();
+    m_pimpl->velMannInput.baseRotation = Eigen::Matrix3d::Identity();
 
     return ok;
 }
@@ -599,11 +599,11 @@ bool VelMANNAutoregressive::setInput(const Input& input)
     m_pimpl->velMannInput.jointPositions = previousVelMannOutput.jointPositions;
     m_pimpl->velMannInput.jointVelocities = previousVelMannOutput.jointVelocities;
     m_pimpl->velMannInput.basePosition = previousVelMannOutput.basePosition;
-    m_pimpl->velMannInput.baseAngle = previousVelMannOutput.baseAngle;
+    m_pimpl->velMannInput.baseRotation = previousVelMannOutput.baseRotation;
 
     // Set the human input values from the input builder
     m_pimpl->velMannInput.humanBasePosition = input.humanBasePosition;
-    m_pimpl->velMannInput.humanBaseAngle = input.humanBaseAngle;
+    m_pimpl->velMannInput.humanBaseRotation = input.humanBaseRotation;
     m_pimpl->velMannInput.humanBaseLinearVelocity = input.humanBaseLinearVelocity;
     m_pimpl->velMannInput.humanBaseAngularVelocity = input.humanBaseAngularVelocity;
 

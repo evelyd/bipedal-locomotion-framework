@@ -30,10 +30,12 @@ VelMANNInput VelMANNInput::generateDummyVelMANNInput(Eigen::Ref<const Eigen::Vec
     input.baseLinearVelocityTrajectory = Eigen::Matrix3Xd::Zero(3, projectedBaseHorizon);
     input.baseAngularVelocityTrajectory = Eigen::Matrix3Xd::Zero(3, projectedBaseHorizon);
     input.basePosition = Eigen::Vector3d(0.0, 0.0, 0.7748); //TODO should these have correct ht?
-    input.baseAngle = Eigen::Vector3d::Zero();
-    //TODO these are from actual data except for vels
-    input.humanBasePosition = Eigen::Vector3d(1.36230472, -0.04849973, 0.30465086); // Eigen::Vector3d(1.2, 0.0, 0.917163 - 0.7748);
-    input.humanBaseAngle = Eigen::Vector3d(-0.05948441, 0.33211389, 3.11758595); //180 deg in z
+    input.baseRotation = Eigen::Matrix3d::Identity();
+    input.humanBasePosition = Eigen::Vector3d(1.12873662, 0.54687876, 0.97729673);
+    input.humanBaseRotation = Eigen::Matrix3d::Identity();
+    input.humanBaseRotation << -0.99550438, -0.0824004, -0.04670327,
+                                0.0855432, -0.99388287, -0.06985133,
+                                -0.0406618, -0.07353246, 0.99646354;
     input.humanBaseLinearVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
     input.humanBaseAngularVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
 
@@ -49,7 +51,7 @@ VelMANNOutput VelMANNOutput::generateDummyVelMANNOutput(Eigen::Ref<const Eigen::
     output.futureBaseLinearVelocityTrajectory = Eigen::Matrix3Xd::Zero(3, futureProjectedBaseHorizon);
     output.futureBaseAngularVelocityTrajectory = Eigen::Matrix3Xd::Zero(3, futureProjectedBaseHorizon);
     output.basePosition = Eigen::Vector3d(0.0, 0.0, 0.7748); //TODO should these have correct ht?
-    output.baseAngle = Eigen::Vector3d::Zero();
+    output.baseRotation = Eigen::Matrix3d::Identity();
 
     return output;
 }
@@ -149,8 +151,12 @@ bool VelMANN::Impl::populateInput(const VelMANNInput& input)
     ok = ok && populateVectorData("joint_positions", input.jointPositions);
     ok = ok && populateProjectedData("base_linear_velocities", input.baseLinearVelocityTrajectory);
     ok = ok && populateProjectedData("base_angular_velocities", input.baseAngularVelocityTrajectory);
-    ok = ok && populateProjectedData("base_position", input.basePosition);
-    ok = ok && populateProjectedData("base_angle", input.baseAngle);
+    ok = ok && populateVectorData("base_position", input.basePosition);
+    ok = ok && populateProjectedData("base_rotation", input.baseRotation);
+    ok = ok && populateVectorData("human_base_position", input.humanBasePosition);
+    ok = ok && populateProjectedData("human_base_rotation", input.humanBaseRotation);
+    ok = ok && populateVectorData("human_base_linear_velocity", input.humanBaseLinearVelocity);
+    ok = ok && populateVectorData("human_base_angular_velocity", input.humanBaseAngularVelocity);
 
     return ok;
 }
@@ -248,8 +254,8 @@ bool VelMANN::initialize(
                                                               // coordinates in the horizon
                                   + numberOfJoints // joint positions
                                   + numberOfJoints // joint velocities
-                                  + 6 //base position and euler angles
-                                  + 6 //human base position and euler angles
+                                  + 3 + 3 * 3 //base position and rotation
+                                  + 3 + 3 * 3 //human base position and rotation
                                   + 6; //human base linear and angular velocities
 
     // resize the input
@@ -272,9 +278,9 @@ bool VelMANN::initialize(
     m_pimpl->structuredInput.handler.addVariable("joint_positions", numberOfJoints);
     m_pimpl->structuredInput.handler.addVariable("joint_velocities", numberOfJoints);
     m_pimpl->structuredInput.handler.addVariable("base_position", 3);
-    m_pimpl->structuredInput.handler.addVariable("base_angle", 3);
+    m_pimpl->structuredInput.handler.addVariable("base_rotation", 3 * 3);
     m_pimpl->structuredInput.handler.addVariable("human_base_position", 3);
-    m_pimpl->structuredInput.handler.addVariable("human_base_angle", 3);
+    m_pimpl->structuredInput.handler.addVariable("human_base_rotation", 3 * 3);
     m_pimpl->structuredInput.handler.addVariable("human_base_linear_velocity", 3);
     m_pimpl->structuredInput.handler.addVariable("human_base_angular_velocity", 3);
 
@@ -285,7 +291,7 @@ bool VelMANN::initialize(
                                                               // coordinates in the future horizon incl. current
                                    + numberOfJoints // joint positions
                                    + numberOfJoints // joint velocities
-                                   + 6; //base position and euler angles
+                                   + 3 + 3 * 3; //base position and rotation
 
     // resize the output
     m_pimpl->structuredOutput.rawData.resize(outputSize);
@@ -308,7 +314,7 @@ bool VelMANN::initialize(
     m_pimpl->structuredOutput.handler.addVariable("joint_positions", numberOfJoints);
     m_pimpl->structuredOutput.handler.addVariable("joint_velocities", numberOfJoints);
     m_pimpl->structuredOutput.handler.addVariable("base_position", 3);
-    m_pimpl->structuredOutput.handler.addVariable("base_angle", 3);
+    m_pimpl->structuredOutput.handler.addVariable("base_rotation", 3 * 3);
 
     // resize the output
     m_pimpl->output.futureBaseLinearVelocityTrajectory.resize(3, (1 + projectedBaseDatapoints / 2));
@@ -316,7 +322,7 @@ bool VelMANN::initialize(
     m_pimpl->output.jointPositions.resize(numberOfJoints);
     m_pimpl->output.jointVelocities.resize(numberOfJoints);
     m_pimpl->output.basePosition.resize(3);
-    m_pimpl->output.baseAngle.resize(3);
+    m_pimpl->output.baseRotation.resize(3, 3);
 
     m_pimpl->state = Impl::FSM::Initialized;
 
@@ -331,6 +337,24 @@ bool VelMANN::setInput(const VelMANNInput& input)
         return false;
     }
     return m_pimpl->populateInput(input);
+}
+
+Eigen::Matrix3d procrustesOrthonormalization(const Eigen::Matrix3d& M)
+{
+    Eigen::JacobiSVD<Eigen::Matrix3d> svd(M, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Matrix3d U = svd.matrixU();
+    Eigen::Matrix3d V = svd.matrixV();
+    Eigen::Vector3d S = svd.singularValues();
+
+    // Flip the sign of the smallest singular value in U and V
+    int minIndex;
+    S.minCoeff(&minIndex);
+    U.col(minIndex) *= -1;
+    V.col(minIndex) *= -1;
+
+    Eigen::Matrix3d R = U * V.transpose();
+
+    return R;
 }
 
 bool VelMANN::advance()
@@ -370,7 +394,10 @@ bool VelMANN::advance()
     unpackMatrix("joint_positions", m_pimpl->output.jointPositions);
     unpackMatrix("joint_velocities", m_pimpl->output.jointVelocities);
     unpackMatrix("base_position", m_pimpl->output.basePosition);
-    unpackMatrix("base_angle", m_pimpl->output.baseAngle);
+    unpackMatrix("base_rotation", m_pimpl->output.baseRotation);
+
+    // Enforce orthogonality for rotation matrix
+    m_pimpl->output.baseRotation = procrustesOrthonormalization(m_pimpl->output.baseRotation);
 
     m_pimpl->state = Impl::FSM::Running;
 

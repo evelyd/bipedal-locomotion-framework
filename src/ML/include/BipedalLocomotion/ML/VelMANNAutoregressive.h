@@ -67,8 +67,8 @@ struct VelMANNAutoregressiveInput
     /**< The human base position in the robot base frame. */
     Eigen::Vector3d humanBasePosition;
 
-    /**< The human base Euler angles in the robot base frame. */
-    Eigen::Vector3d humanBaseAngle;
+    /**< The human base rotation matrix in the robot base frame. */
+    Eigen::Matrix3d humanBaseRotation;
 
     /**< The human base linear velocity in the robot base frame. */
     Eigen::Vector3d humanBaseLinearVelocity;

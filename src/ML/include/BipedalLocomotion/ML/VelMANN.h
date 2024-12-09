@@ -42,10 +42,10 @@ struct VelMANNInput
     Eigen::VectorXd jointVelocities; /**< Vector containing the actual joint velocity in radians per
                                         seconds. */
     Eigen::Vector3d basePosition; /**< Vector containing the actual base position in m */
-    Eigen::Vector3d baseAngle; /**< Vector containing the actual base euler angles in radians */
+    Eigen::Matrix3d baseRotation; /**< Matrix containing the actual base rotation matrix */
 
     Eigen::Vector3d humanBasePosition; /**< Vector containing the human base position in m */
-    Eigen::Vector3d humanBaseAngle; /**< Vector containing the human base euler angles in radians */
+    Eigen::Matrix3d humanBaseRotation; /**< Matrix containing the human base rotation matrix */
 
     Eigen::Vector3d humanBaseLinearVelocity; /**< Vector containing the human base linear velocity
                                         in m/s */
@@ -88,7 +88,7 @@ struct VelMANNOutput
                                         seconds */
 
     Eigen::Vector3d basePosition; /**< Vector containing the next base position in m */
-    Eigen::Vector3d baseAngle; /**< Vector containing the next base euler angles in radians */
+    Eigen::Matrix3d baseRotation; /**< Matrix containing the next base rotation */
 
     /**
      * Generate a dummy MANNOutput from a given joint configuration
