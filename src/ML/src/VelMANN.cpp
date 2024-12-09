@@ -149,8 +149,12 @@ bool VelMANN::Impl::populateInput(const VelMANNInput& input)
     ok = ok && populateVectorData("joint_positions", input.jointPositions);
     ok = ok && populateProjectedData("base_linear_velocities", input.baseLinearVelocityTrajectory);
     ok = ok && populateProjectedData("base_angular_velocities", input.baseAngularVelocityTrajectory);
-    ok = ok && populateProjectedData("base_position", input.basePosition);
+    ok = ok && populateVectorData("base_position", input.basePosition);
     ok = ok && populateProjectedData("base_angle", input.baseAngle);
+    ok = ok && populateVectorData("human_base_position", input.humanBasePosition);
+    ok = ok && populateProjectedData("human_base_angle", input.humanBaseAngle);
+    ok = ok && populateVectorData("human_base_linear_velocity", input.humanBaseLinearVelocity);
+    ok = ok && populateVectorData("human_base_angular_velocity", input.humanBaseAngularVelocity);
 
     return ok;
 }
